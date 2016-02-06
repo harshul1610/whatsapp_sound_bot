@@ -6,7 +6,8 @@ from yowsup.stacks.yowstack import YowStackBuilder
 
 from layer import EchoLayer
 
-CREDENT = ("919643392110", "68K8YZb/XHW5ZA1KxL23MMsfHBc=") # replace with your phone and password
+CREDENT = ("phone","password") # replace with your phone and password
+
 class YowsupEchoStack(object):
     def __init__(self, credentials):
         "Creates the stacks of the Yowsup Server,"
