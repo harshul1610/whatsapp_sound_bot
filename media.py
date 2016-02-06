@@ -59,18 +59,6 @@ class MediaSender():
         err_callback = lambda errorEntity, originalEntity: self._on_error(jid)
         self.interface_layer._sendIq(entity, success_callback, err_callback)
 
-    def _download_file(self, file_url):
-        """
-            This method check for duplicate file before downloading,
-            If not downloaded, download it, saves locally and returns the path
-        """
-        file_path = self._build_file_path(file_url)
-        if not os.path.isfile(file_path):
-            response = requests.get(file_url, stream=True)
-            with open(file_path, 'wb') as out_file:
-                shutil.copyfileobj(response.raw, out_file)
-            del response
-        return file_path
 
     def _on_upload_result(self, jid, file_path, upload_result, requestUploadIqProtocolEntity, caption=None):
         """
@@ -108,13 +96,6 @@ class MediaSender():
     def _on_error(self, jid, *args, **kwargs):
         self.interface_layer.toLower(TextMessageProtocolEntity("{!}", to=jid))
 
-    def _get_file_ext(self, url):
-        return self.file_extension_regex.findall(url)[0]
-
-    def _build_file_path(self, url):
-        id = hashlib.md5(url).hexdigest()
-        return ''.join([self.storage_path, id, ".", self._get_file_ext(url)])
-
 
 class mediaview(MediaSender):
 
@@ -132,14 +113,13 @@ class mediaview(MediaSender):
             self._on_error(jid)
 
     def tts_record(self, text, lang='en'):
-        file_path = self._build_file_path(text)
+        id = hashlib.md5(text).hexdigest()
+        file_path= ''.join([self.storage_path, id, ".wav"])
         cmd = "espeak -v%s -w %s '%s'" % (lang, file_path, text)
         subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).wait()
         return file_path
 
-    def _build_file_path(self, text):
-        id = hashlib.md5(text).hexdigest()
-        return ''.join([self.storage_path, id, ".wav"])
+
 
     def callback(self,inmessageprotocolentity):
         self.send(jid=inmessageprotocolentity.getFrom(), text= inmessageprotocolentity.getBody())
