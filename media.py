@@ -12,11 +12,8 @@ from yowsup.layers.protocol_media.protocolentities.message_media_downloadable_au
     AudioDownloadableMediaMessageProtocolEntity
 from yowsup.layers.protocol_messages.protocolentities import TextMessageProtocolEntity
 import subprocess
-import time
 import os
 import logging
-import requests
-import shutil
 import hashlib
 import re
 
@@ -35,16 +32,8 @@ class MediaSender():
         self.storage_path = "/tmp/"
         self.file_extension_regex = re.compile("^.*\.([0-9a-z]+)(?:[\?\/][^\s]*)?$")
         self.MEDIA_TYPE = None
-
-    def send_by_url(self, jid, file_url, caption=None):
-        """ Downloads and send a file_url """
-        try:
-            # self.interface_layer.toLower(TextMessageProtocolEntity("{...}", to=jid))
-            file_path = self._download_file(file_url)
-            self.send_by_path(jid, file_path, caption)
-        except Exception as e:
-            logging.exception(e)
-            self._on_error(jid)
+        self.path=None
+        self.jid=None
 
     def send_by_path(self, jid, path, caption=None):
         """
@@ -53,23 +42,22 @@ class MediaSender():
             Creates a RequestUpload entity, that will verify if the media has already been uploaded.
             Then calls the _on_upload_result.
         """
-        entity = RequestUploadIqProtocolEntity(self.MEDIA_TYPE, filePath=path)
-        success_callback = lambda successEntity, originalEntity: self._on_upload_result(jid, path, successEntity,
-                                                                                        originalEntity, caption)
-        err_callback = lambda errorEntity, originalEntity: self._on_error(jid)
-        self.interface_layer._sendIq(entity, success_callback, err_callback)
+        self.jid=jid
+        self.path=path
+        entity = RequestUploadIqProtocolEntity(self.MEDIA_TYPE, filePath=self.path)
+        self.interface_layer._sendIq(entity,self._on_upload_result,self._on_error)
 
 
-    def _on_upload_result(self, jid, file_path, upload_result, requestUploadIqProtocolEntity, caption=None):
+    def _on_upload_result(self,upload_result, requestUploadIqProtocolEntity, caption=None):
         """
             If the file has never been uploaded, will be uploaded and then call the _do_send_file
         """
         if upload_result.isDuplicate():
-            self._do_send_file(file_path, upload_result.getUrl(), jid, upload_result.getIp(), caption)
+            self._do_send_file(self.path, upload_result.getUrl(), self.jid, upload_result.getIp(), caption)
         else:
-            callback = lambda file_path, jid, url: self._do_send_file(file_path, url, jid, upload_result.getIp(),
+            callback = lambda file_path, jid, url: self._do_send_file(self.path, url, self.jid, upload_result.getIp(),
                                                                       caption)
-            mediaUploader = MediaUploader(jid, self.interface_layer.getOwnJid(), file_path,
+            mediaUploader = MediaUploader(self.jid, self.interface_layer.getOwnJid(),self.path,
                                           upload_result.getUrl(),
                                           upload_result.getResumeOffset(),
                                           callback, self._on_error, self._on_upload_progress, async=True)
