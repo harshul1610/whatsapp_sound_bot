@@ -1,4 +1,4 @@
-Pillow==3.1.1
+Pillow==6.2.0
 protobuf==2.6.1
 pycrypto==2.6.1
 python-axolotl==0.1.7
